@@ -148,7 +148,7 @@ class EmailController extends BaseController
         }
         if(!empty($query->getResult()))
         {
-        $result = array('statusCode' => '200', 'message' => 'Enter valid input', 'result' => $query->getResult());
+        $result = array('statusCode' => '200', 'message' => 'Succesfully retrieved Result', 'result' => $query->getResult());
             header('Content-Type: application/json');  // <-- header declaration
             echo json_encode($result, true);    // <--- encode
             exit();
@@ -268,7 +268,7 @@ class mypdf extends TCPDF {
         $this->SetAutoPageBreak(false, 0);
 
         // Define the path to the image that you want to use as watermark.
-        $img_file = './assets/img/gems_logo_layered.jpeg';
+        $img_file = './assets/img/watermark.png ';
 
         // Render the image
         $this->Image($img_file, 0, 50, 223, 280, '', '', '', false, 300, '', false, false, 0);
