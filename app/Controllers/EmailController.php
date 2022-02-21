@@ -4,12 +4,16 @@ namespace App\Controllers;
 use TCPDF;
 use App\Models\Main_Model;
 use App\Models\Attach_Model;
-use App\Config\AppConstant;
+
 
 class EmailController extends BaseController
 {
-    public function __construct(){
+     private $db;
+
     
+    public function __construct(){
+        $this->db = db_connect(); // Loading database
+        // OR $this->db = \Config\Database::connect();
         $this->store = new Main_Model();
         $this->storeAttach = new Attach_Model();       
     }
@@ -131,16 +135,30 @@ class EmailController extends BaseController
     {
         if(!empty($userid))
         {
-            $data=$this->store->where('userid',$userid)->findAll();
-            //$data=$this->store->findAll();
-            
-            if(!empty($data))
-                $result = array('statusCode' => '200', 'message' => 'Success: Mail Sent Successfully', 'result' => $data);
-            else
-                $result = array('statusCode' => '200', 'message' => 'No data found', 'result' => '');
+        $builder = $this->db->table("emaildata as table1");
+        $builder->select('table1.*, table2.file_name as attachment');
+        $builder->where('table1.userid='.$userid);
+        $builder->join('mailattachment as table2', 'table1.id = table2.id_mail');
+        
+        $query = $builder->get();
+       
+        foreach($query->getResult() as $row)
+        {
+            $row->attachment=base_url().'/uploads/'.$row->attachment;
+        }
+        if(!empty($query->getResult()))
+        {
+        $result = array('statusCode' => '200', 'message' => 'Enter valid input', 'result' => $query->getResult());
             header('Content-Type: application/json');  // <-- header declaration
             echo json_encode($result, true);    // <--- encode
             exit();
+        }
+        else{
+            $result = array('statusCode' => '200', 'message' => 'No mail sent for the given id', 'result' => '');
+            header('Content-Type: application/json');  // <-- header declaration
+            echo json_encode($result, true);    // <--- encode
+            exit();
+        }
         }
         else
         {
@@ -149,6 +167,8 @@ class EmailController extends BaseController
             echo json_encode($result, true);    // <--- encode
             exit();
         }
+    
+        
     }
     public function printpdf()
     {

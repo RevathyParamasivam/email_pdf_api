@@ -39,7 +39,7 @@ $protocol = $isHttps ? "https://" : "http://";
 $base     = $protocol . $_SERVER['HTTP_HOST'];
 $base .= str_replace(basename($_SERVER['SCRIPT_NAME']), "", $_SERVER['SCRIPT_NAME']);
 
-define("ENVIRONMENT", "testing");
+define("ENVIRONMENT", "development");
 define('BASEURL', $base);
 switch (ENVIRONMENT) {
     case 'development':
