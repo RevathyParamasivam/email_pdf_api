@@ -271,7 +271,7 @@ class EmailController extends BaseController
 
         $pdf->WriteHTML($pdfContent, true, 0, true, 0);
         $this->response->setContentType('application/pdf');
-        $pdf->Output('test.pdf', 'D');
+        $pdf->Output('test.pdf', 'I');
        
 
     }
