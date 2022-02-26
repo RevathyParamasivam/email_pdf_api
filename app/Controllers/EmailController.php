@@ -4,7 +4,8 @@ namespace App\Controllers;
 use TCPDF;
 use App\Models\Main_Model;
 use App\Models\Attach_Model;
-
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 class EmailController extends BaseController
 {
@@ -27,20 +28,54 @@ class EmailController extends BaseController
 
     public function sendEmail()
     {
-        $status=0;      
-        if(isset($_POST['message']))
-        {
+       // if (strtolower($this->reqMethod) == 'post') {
+        //Getting iput from API
+        $data= $this->getDataFromUrl('json');
+        $to = isset($data['to']) ? $data['to'] : null;
+        $cc=isset($data['cc']) ? $data['cc'] : null;
+        $bcc=isset($data['bcc']) ? $data['bcc'] : null;
+        $userid=isset($data['userid']) ? $data['userid'] : null;
+        $subject=isset($data['subject']) ? $data['subject'] : null;
+        $mailMessage=isset($data['body']) ? $data['body'] : null;
+        $name=isset($data['name']) ? $data['name'] : null;
+        $pdfContent=isset($data['pdfContent']) ? $data['pdfContent'] : null;
+        $status=0;   
+            $mail = new PHPMailer(true);  
+            $mail->isSMTP();  
+		    $mail->Host         = 'smtp.gmail.com'; //smtp.google.com
+		    $mail->SMTPAuth     = true;     
+		    $mail->Username     = 'test.work.mail.revathy@gmail.com';  
+		    $mail->Password     = 'jyo@123thi';
+			$mail->SMTPSecure   = 'tls';  
+			$mail->Port         = 587;  
+			$mail->Subject      = $subject;
+			$mail->Body         = $mailMessage;
+			$mail->setFrom($cc, 'Revathy');
+			$mail->addAddress($to);  
+		    $mail->addCC($cc, "Revathy");
+            $mail->addBCC($bcc, "Stalin");
+            $mail->isHTML(true);
+            if(!$pdfContent)
+            {
+            //Dont generate pdf
+            }
+            else
+            {
+            $pdf = new mypdf();
+            $pdf->setPrintHeader(false);
+            $pdf->setPrintFooter(false);
+            $pdf->AddPage();
+            $pdf->writeHTML($pdfContent, true, 0, true, 0);
+            $this->response->setContentType('application/pdf');
+            $generatedPdf=$pdf->Output('test.pdf', 'S');
+            $mail->addStringAttachment($generatedPdf,"Ori.PDF");
+            }
+        
+        /*
             $attachmenName=array();
             $url=array();
             $url=$_POST['url'] ?? [];
             $i=0;
-            $to=getenv('MAIL_TO');
-            $cc=getenv('MAIL_CC');
-            $bcc=getenv('MAIL_BCC');
-            $userid=$_POST['userid'];
-            $subject=$_POST['subject'];
-            $message=$_POST['message'];
-            $mailMessage="Subject:".$subject."<br> Message :".$message."<br> Name :".$_POST['name']."<br> Mail Id :".$_POST['email'];
             
             if(!empty($url))
                 {   
@@ -50,28 +85,17 @@ class EmailController extends BaseController
                         $i++;
                     }
                 }    
+        */
         
-        //Email instance creation;
-        $email=\Config\Services::email();
-        $email->setFrom(getenv('MAIL_FROM'));
-        $email->setTo($to);
-        $email->setCC($cc);
-        $email->setBCC($bcc);
-        $email->setSubject($subject);
-        $email->setMessage($mailMessage);
-        
+        /*
         $upload_dir = './uploads'.DIRECTORY_SEPARATOR;
             if(!empty(array_filter($_FILES['attach']['name']))) {
             foreach ($_FILES['attach']['tmp_name'] as $key => $value) {
              
                 $file_tmpname = $_FILES['attach']['tmp_name'][$key];
                 $file_name = $_FILES['attach']['name'][$key];
-                //$file_size = $_FILES['attach']['size'][$key];
-                //$file_ext = pathinfo($file_name, PATHINFO_EXTENSION);
                 $filepath = $upload_dir.$file_name;
                 
-
-                //echo $filepath;
                 if(file_exists($filepath)) {
                     $filepath = $upload_dir.time().$file_name;
                        $attachmenName[$i]=time().$file_name;$i++;
@@ -96,23 +120,20 @@ class EmailController extends BaseController
 
                 $email->attach($filepath);
             }
-        }
-        if($email->send())
+        }*/
+        
+        if($mail->send())
         {
-            $status=1; 
-            $insertdata=['userid'=>$userid,'name'=>$_POST['name'],'email'=>$_POST['email'],'subject'=>$subject,'message'=>$_POST['message'],'status'=>$status,'cc'=>$cc,'bcc'=>$bcc];
-            $this->store->save($insertdata);
-            $email_id = $this->store->getInsertID();
+            $status=1;
         }
         else
         {
-            $status=0;
-            $data=$email->printDebugger(['headers']);
-            $insertdata=['userid'=>$userid,'name'=>$_POST['name'],'email'=>$_POST['email'],'subject'=>$subject,'message'=>$_POST['message'],'status'=>$status,'cc'=>$cc,'bcc'=>$bcc];
-            $this->store->save($insertdata);
-            $email_id = $this->store->getInsertID();    
+            $status=0;    
         }
-
+        $insertdata=['userid'=>$userid,'name'=>$name,'email'=>$to,'subject'=>$subject,'message'=>$mailMessage,'status'=>$status,'cc'=>$cc,'bcc'=>$bcc];
+        $this->store->save($insertdata);
+        /*
+        $email_id = $this->store->getInsertID();
         $attachmentCount=count($attachmenName);
         for ($x = 0; $x < $attachmentCount; $x++) { 
                         $image_data=['id_mail'=>$email_id,'file_name'=>$attachmenName[$x],'status'=>$status];
@@ -120,16 +141,17 @@ class EmailController extends BaseController
                         }
 
         }
-        
+        */
         if($status==1)
-         $result = array('statusCode' => '200', 'message' => 'Success: Mail Sent Successfully', 'result' => '');
+         return $this->message(200,'Success: Mail Sent Successfully','');
         else
-        $result = array('statusCode' => '5XX', 'message' => 'FAILURE: Mail Not Sent. Please resend', 'result' => '');
-
-        header('Content-Type: application/json');  // <-- header declaration
-        echo json_encode($result, true);    // <--- encode
-        exit();
+        return $this->message(400,'Server Error','');
         
+        /*}
+        else
+        {
+            return $this->message(400, null, 'Method Not Allowed');
+        }*/
     }
     public function fetchMail($userid)
     {
@@ -172,6 +194,9 @@ class EmailController extends BaseController
     }
     public function printpdf()
     {
+       $data= $this->getDataFromUrl('json');
+        $pdfContent=isset($data['pdfContent']) ? $data['pdfContent'] : null;
+        //$pdfContent=isset($pdfContent1)?$pdfContent1:"PdfCalling";
         $pdf = new mypdf();
         $pdf->setPrintFooter(false);
         $pdf->AddPage();
@@ -244,10 +269,10 @@ class EmailController extends BaseController
             ';
 
 
-        $pdf->WriteHTML($output, true, 0, true, 0);
+        $pdf->WriteHTML($pdfContent, true, 0, true, 0);
         $this->response->setContentType('application/pdf');
-        $pdf->Output('example_001.pdf', 'I');
-        return ('Success: Mail Sent Successfully');
+        $pdf->Output('test.pdf', 'D');
+       
 
     }
     
@@ -285,7 +310,7 @@ class mypdf extends TCPDF {
     // Page footer
     public function Footer() {
       
-      $this->SetXY(10,240);
+    $this->SetXY(10,240);
     $this->Cell(100,45,'Yours in His vineyard,',0,1,'L');
     $this->SetXY(120,270);
     $this->MultiCell(80,6,'I tell you the truth, anyone who gives you a cup of water in my name because you belong to Christ will certainly not lose his reward. (Mark 9:41 NIV) ',1,'J');
